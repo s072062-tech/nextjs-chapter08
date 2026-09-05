@@ -1,13 +1,13 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import type { Post } from "./_types/types";
+import type { MicroCmsPost } from "./_types/types";
 import PostCard from "./_components/PostCard";
 
 // 記事一覧ページ
 export default function Home () {
 
-  const [ posts, setPosts ]     = useState<Post[]>([]);
+  const [ posts, setPosts ]     = useState<MicroCmsPost[]>([]);
   const [ loading, setLoading ] = useState(true);
   const [ error, setError ]     = useState<string | null>(null);
 
@@ -16,19 +16,21 @@ export default function Home () {
     const fetcher = async () => {
 
       try {
-        const res = await fetch("https://1hmfpsvto6.execute-api.ap-northeast-1.amazonaws.com/dev/posts");
+        const res = await fetch(process.env.NEXT_PUBLIC_API_BASE_URL!, {
+          headers: {
+            'X-MICROCMS-API-KEY': process.env.NEXT_PUBLIC_API_KEY!,
+          },
+        })
+        const { contents } = await res.json()
+        setPosts(contents)
 
-        if (!res.ok) throw new Error('Failed to fetch posts')
-
-        const { posts } = await res.json();
-        setPosts(posts);  
       } catch {
         setError('記事の取得に失敗しました。')
       } finally {
         setLoading(false);
       }
 
-    };
+    }
 
     fetcher();
   }, []);

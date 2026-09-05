@@ -4,14 +4,14 @@ import Link from "next/link";
 import Image from "next/image";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
-import type { Post } from "@/app/_types/types";
+import type { MicroCmsPost } from "@/app/_types/types";
 import CategoryTag from "@/app/_components/CategoryTag";
 
 // 記事詳細
 export default function PostDetail() {
 
   const { id } = useParams();
-  const [ post, setPost ]       = useState<Post | null>(null);
+  const [ post, setPost ]       = useState<MicroCmsPost | null>(null);
   const [ loading, setLoading ] = useState(true);
   const [ error, setError ]     = useState<string | null>(null);
 
@@ -23,12 +23,17 @@ export default function PostDetail() {
     const fetcher = async () => {
 
       try {
-        const res = await fetch(`https://1hmfpsvto6.execute-api.ap-northeast-1.amazonaws.com/dev/posts/${id}`);
+        const res = await fetch(
+          `${process.env.NEXT_PUBLIC_API_BASE_URL}/${id}`,
+          {
+            headers: {
+              'X-MICROCMS-API-KEY': process.env.NEXT_PUBLIC_API_KEY!,
+            },
+          },
+        )
+        const data = await res.json()
+        setPost(data) // dataをそのままセット
 
-        if (!res.ok) throw new Error('Failed to fetch posts')
-
-        const { post } = await res.json();
-        setPost(post);  
       } catch {
         setError('記事の取得に失敗しました。')
       } finally {
@@ -73,12 +78,12 @@ export default function PostDetail() {
     )
   }
 
-  const {title, thumbnailUrl, createdAt, categories, content} = post;
+  const {title, thumbnail, createdAt, categories, content} = post;
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-4">
       {/* サムネ画像 */}
-      <Image src={thumbnailUrl} alt={title} width={800} height={400}
+      <Image src={thumbnail.url} alt={title} width={800} height={400}
       className="py-4 object-cover shrink-0" />
       <div className="flex flex-row items-center gap-2 mb-6">
         {/* 作成時間 */}
@@ -92,7 +97,7 @@ export default function PostDetail() {
         {/* カテゴリタグ */}
         <div>
           {categories.map((categorie) => (
-            <CategoryTag key={categorie} categorie={categorie} />
+            <CategoryTag key={categorie.name} categorie={categorie.name} />
           ))}
         </div>
       </div>
