@@ -3,6 +3,7 @@
 import { useEffect, useState, type SubmitEvent } from "react";
 import { useParams, useRouter } from "next/navigation";
 import type { CategoryResponse, UpdateCategoryRequestBody } from "@/app/api/admin/categories/[id]/route";
+import CategoryForm from "@/app/_components/admin/CategoryForm";
 
 export default function AdminCategoryIdPage() {
   type FormErrors = {
@@ -122,37 +123,17 @@ export default function AdminCategoryIdPage() {
 
   return (
     <div>
-      <h1 className="text-2xl font-bold">カテゴリー作成</h1>
+      <h1 className="text-2xl font-bold">カテゴリー編集</h1>
 
-      <form onSubmit={handleSubmit} className="space-y-6">
-        {/* カテゴリー名 入力 */}
-        <div>
-          <label className="block text-sm text-gray-500 mb-1">カテゴリー編集</label>
-          <input
-            type="text" value={name} 
-            onChange={(e) => setName(e.target.value)} 
-            disabled={isSubmitting}
-            className="border border-gray-300 w-full px-3 py-2"
-          />
-          {errors.name && (
-            <p className="text-red-500 text-sm mt-1">{errors.name}</p>
-          )}
-        </div>
-
-        {/* ボタン */}
-        <div className="flex gap-3">
-          <button type="submit" 
-          disabled={isSubmitting} 
-          className="rounded-lg bg-blue-600 text-white px-4 py-2 disabled:opacity-50">
-          更新</button>
-          <button type="button" 
-          onClick={handleDelete}
-          disabled={isSubmitting} 
-          className="rounded-lg bg-red-600 text-white px-4 py-2 disabled:opacity-50">
-          削除</button>
-        </div>
-      </form>
-
+      <CategoryForm
+        name={name}
+        setName={setName}
+        error={errors.name}
+        isSubmitting={isSubmitting}
+        submitLabel="更新"
+        onSubmit={handleSubmit}
+        onDelete={handleDelete}
+      />
     </div>
   );
 }

@@ -2,6 +2,7 @@
 
 import { useState, type SubmitEvent } from "react";
 import type { CreateCategoryRequestBody } from "@/app/api/admin/categories/route";
+import CategoryForm from "@/app/_components/admin/CategoryForm";
 
 export default function AdminCategoryNewPage() {
   type FormErrors = {
@@ -58,30 +59,14 @@ export default function AdminCategoryNewPage() {
     <div>
       <h1 className="text-2xl font-bold">カテゴリー作成</h1>
 
-      <form onSubmit={handleSubmit} className="space-y-6">
-        {/* カテゴリー名 入力 */}
-        <div>
-          <label className="block text-sm text-gray-500 mb-1">カテゴリー名</label>
-          <input
-            type="text" value={name} 
-            onChange={(e) => setName(e.target.value)} 
-            disabled={isSubmitting}
-            className="border border-gray-300 w-full px-3 py-2"
-          />
-          {errors.name && (
-            <p className="text-red-500 text-sm mt-1">{errors.name}</p>
-          )}
-        </div>
-
-        {/* ボタン */}
-        <div className="flex gap-3">
-          <button type="submit" 
-          disabled={isSubmitting} 
-          className="rounded-lg bg-blue-600 text-white px-4 py-2 disabled:opacity-50">
-          作成</button>
-        </div>
-      </form>
-
+      <CategoryForm
+        name={name}
+        setName={setName}
+        error={errors.name}
+        isSubmitting={isSubmitting}
+        submitLabel="作成"
+        onSubmit={handleSubmit}
+      />
     </div>
   );
 }
