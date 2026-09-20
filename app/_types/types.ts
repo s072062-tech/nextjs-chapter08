@@ -8,6 +8,10 @@ export type Post = {
   content: string,
 };
 
+export type PropsParams = {
+  params: Promise<{id: string}>,
+};
+
 type Category = {
   id: string,
   name: string,
