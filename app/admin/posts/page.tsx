@@ -64,7 +64,7 @@ export default function AdminPostsPage() {
               <Link href={`/admin/posts/${post.id}`}
               className="block py-4 font-bold hover:bg-gray-50">
                 <p>{post.title}</p>
-                <p className="text-sm text-gray-500">{post.createdAt.toLocaleDateString("ja-JP")}</p>
+                <p className="text-sm text-gray-500">{new Date(post.createdAt).toLocaleDateString("ja-JP")}</p>
               </Link>
             </li>
           );

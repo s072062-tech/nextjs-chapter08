@@ -1,14 +1,16 @@
 "use client";
 
 import { useEffect, useState, type SubmitEvent } from "react";
-import { useRouter } from "next/navigation";
-import type { CreatePostRequestBody } from "@/app/api/admin/posts/route";
+import { useParams, useRouter } from "next/navigation";
+import type { GetPostsIdResponse } from "@/app/api/posts/[id]/route";
+import type { UpdatePostRequestBody } from "@/app/api/admin/posts/[id]/route";
 import type { CategoriesResponse } from "@/app/api/admin/categories/route";
 import PostForm from "@/app/_components/admin/PostForm";
 
-export default function AdminPostNewPage() {
+export default function AdminPostIdPage() {
 
   const router = useRouter();
+  const { id } = useParams();
   const [ loading, setLoading ] = useState(true);
   const [ error, setError ]     = useState<string | null>(null);
 
@@ -19,7 +21,7 @@ export default function AdminPostNewPage() {
   const [ selectCategories, setSelectCategories ] = useState<number[]>([]);
   const [ isSubmitting, setIsSubmitting ] = useState(false);
 
-  // カテゴリー一覧取得
+  // IDの記事, カテゴリー一覧 取得
   useEffect(() => {
     const fetcher = async () => {
 
@@ -30,6 +32,22 @@ export default function AdminPostNewPage() {
 
       } catch {
         setError('カテゴリーの取得に失敗しました。');
+      } finally {
+        setLoading(false);
+      }
+
+      try {
+        const res = await fetch(`/api/admin/posts/${id}`);
+        const { post } = await res.json() as GetPostsIdResponse;
+        setTitle(post.title);
+        setContent(post.content);
+        setThumbnailUrl(post.thumbnailUrl);
+        setSelectCategories(
+          post.postCategories.map((postCategory) => postCategory.category.id)
+        );
+
+      } catch {
+        setError('記事の取得に失敗しました。');
       } finally {
         setLoading(false);
       }
@@ -57,11 +75,11 @@ export default function AdminPostNewPage() {
     )
   }
 
-  // 新規記事送信
+  // 記事更新
   const handleSubmit = async (e: SubmitEvent<HTMLFormElement>) => { 
     e.preventDefault();
 
-    const body: CreatePostRequestBody = { 
+    const body: UpdatePostRequestBody = { 
       title,
       content,
       thumbnailUrl, 
@@ -71,17 +89,38 @@ export default function AdminPostNewPage() {
     setIsSubmitting(true);
 
     try {
-      await fetch("/api/admin/posts", {
-        method: 'POST',
+      await fetch(`/api/admin/posts/${id}`, {
+        method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
       });
 
-      alert("作成しました");
+      alert("更新しました");
+
+    } catch(error) {
+      console.error("更新に失敗しました:", error);
+
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
+  // 記事削除
+  const handleDelete = async () => { 
+    if (!confirm('削除しますか？')) return;
+
+    setIsSubmitting(true);
+
+    try {
+      await fetch(`/api/admin/posts/${id}`, {
+        method: 'DELETE',
+      });
+
+      alert("削除しました");
       router.push('/admin/posts');
 
     } catch(error) {
-      console.error("作成に失敗しました:", error);
+      console.error("削除に失敗しました:", error);
 
     } finally {
       setIsSubmitting(false);
@@ -103,8 +142,9 @@ export default function AdminPostNewPage() {
         selectCategories={selectCategories}
         setSelectCategories={setSelectCategories}
         isSubmitting={isSubmitting}
-        submitLabel="作成"
+        submitLabel="更新"
         onSubmit={handleSubmit}
+        onDelete={handleDelete}
       />
     </div>
   );

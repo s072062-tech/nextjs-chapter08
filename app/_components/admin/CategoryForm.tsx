@@ -5,7 +5,6 @@ import type { SubmitEvent } from "react";
 type Props = {
   name: string;
   setName: (name: string) => void;
-  error?: string;
   isSubmitting: boolean;
   submitLabel: string;
   onSubmit: (e: SubmitEvent<HTMLFormElement>) => void;
@@ -15,14 +14,13 @@ type Props = {
 export default function CategoryForm({
   name,
   setName,
-  error,
   isSubmitting,
   submitLabel,
   onSubmit,
   onDelete,
 }: Props) {
   return (
-    <form onSubmit={onSubmit} className="space-y-6">
+    <form onSubmit={onSubmit} className="mt-8 space-y-6">
       {/* カテゴリー名 入力 */}
       <div>
         <label className="block text-sm text-gray-500 mb-1">カテゴリー名</label>
@@ -33,9 +31,6 @@ export default function CategoryForm({
           disabled={isSubmitting}
           className="border border-gray-300 w-full px-3 py-2"
         />
-        {error && (
-          <p className="text-red-500 text-sm mt-1">{error}</p>
-        )}
       </div>
 
       {/* ボタン */}

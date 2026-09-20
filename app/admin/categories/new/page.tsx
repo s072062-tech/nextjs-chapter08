@@ -1,38 +1,19 @@
 "use client";
 
 import { useState, type SubmitEvent } from "react";
+import { useRouter } from "next/navigation";
 import type { CreateCategoryRequestBody } from "@/app/api/admin/categories/route";
 import CategoryForm from "@/app/_components/admin/CategoryForm";
 
 export default function AdminCategoryNewPage() {
-  type FormErrors = {
-    name?: string,
-  };
 
+  const router = useRouter();
   const [ name, setName ] = useState("");
-  const [ errors, setErrors ] = useState<FormErrors>({});
   const [ isSubmitting, setIsSubmitting ] = useState(false);
 
-  // バリデーション
-  const validate = () => {
-    const newErrors: FormErrors = {};
-
-    if(!name) {
-      newErrors.name = "カテゴリー名は必須です。";
-    }
-
-    return newErrors;
-  }
-
-  // 新規カテゴリー送信
+  // 新規カテゴリー追加
   const handleSubmit = async (e: SubmitEvent<HTMLFormElement>) => { 
     e.preventDefault();
-    const validationErrors = validate();
-
-    if(Object.keys(validationErrors).length > 0) {
-      setErrors(validationErrors);
-      return;
-    }
 
     const body: CreateCategoryRequestBody = { name };
     setIsSubmitting(true);
@@ -44,11 +25,11 @@ export default function AdminCategoryNewPage() {
         body: JSON.stringify(body),
       });
 
-      alert("送信しました");
-      setErrors({});
+      alert("作成しました");
+      router.push('/admin/categories');
 
     } catch(error) {
-      console.error("送信に失敗しました:", error);
+      console.error("作成に失敗しました:", error);
 
     } finally {
       setIsSubmitting(false);
@@ -62,7 +43,6 @@ export default function AdminCategoryNewPage() {
       <CategoryForm
         name={name}
         setName={setName}
-        error={errors.name}
         isSubmitting={isSubmitting}
         submitLabel="作成"
         onSubmit={handleSubmit}

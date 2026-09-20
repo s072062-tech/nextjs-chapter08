@@ -2,22 +2,18 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import type { MicroCmsPost } from "../_types/types";
+import type { GetPostsIdResponse } from "../api/posts/[id]/route";
 import CategoryTag from "./CategoryTag";
 
-type PostCardProps = {
-  post: MicroCmsPost,
-};
-
 // 記事情報
-export default function PostCard({ post }: PostCardProps) {
-  const {id, title, thumbnail, createdAt, categories, content} = post;
+export default function PostCard({ post }: GetPostsIdResponse) {
+  const {id, title, thumbnailUrl, createdAt, postCategories, content} = post;
 
   return (
     <Link href={`/posts/${id}`} className="block">
       <div className="flex flex-row overflow-hidden shadow-sm hover:shadow-md transition">
         {/* サムネ画像 */}
-        <Image src={thumbnail.url} alt={title} width={240} height={160} 
+        <Image src={thumbnailUrl} alt={title} width={240} height={160} 
         className="py-4 object-cover shrink-0" />
         <div className="p-4">
           <div className="flex flex-row items-center gap-2 mb-2">
@@ -31,8 +27,8 @@ export default function PostCard({ post }: PostCardProps) {
             </span>
             {/* カテゴリタグ */}
             <div>
-              {categories.map((categorie) => (
-                <CategoryTag key={categorie.name} categorie={categorie.name} />
+              {postCategories.map(({category}) => (
+                <CategoryTag key={category.name} categorie={category.name} />
               ))}
             </div>
           </div>

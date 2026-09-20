@@ -6,9 +6,6 @@ import type { CategoryResponse, UpdateCategoryRequestBody } from "@/app/api/admi
 import CategoryForm from "@/app/_components/admin/CategoryForm";
 
 export default function AdminCategoryIdPage() {
-  type FormErrors = {
-    name?: string,
-  };
 
   const router = useRouter();
   const { id } = useParams();
@@ -16,7 +13,6 @@ export default function AdminCategoryIdPage() {
   const [ error, setError ]     = useState<string | null>(null);
 
   const [ name, setName ] = useState("");
-  const [ errors, setErrors ] = useState<FormErrors>({});
   const [ isSubmitting, setIsSubmitting ] = useState(false);
 
   // IDのカテゴリー取得
@@ -57,26 +53,9 @@ export default function AdminCategoryIdPage() {
     )
   }
 
-  // バリデーション
-  const validate = () => {
-    const newErrors: FormErrors = {};
-
-    if(!name) {
-      newErrors.name = "カテゴリー名は必須です。";
-    }
-
-    return newErrors;
-  }
-
   // カテゴリー更新
   const handleSubmit = async (e: SubmitEvent<HTMLFormElement>) => { 
     e.preventDefault();
-    const validationErrors = validate();
-
-    if(Object.keys(validationErrors).length > 0) {
-      setErrors(validationErrors);
-      return;
-    }
 
     const body: UpdateCategoryRequestBody = { name };
     setIsSubmitting(true);
@@ -89,7 +68,6 @@ export default function AdminCategoryIdPage() {
       });
 
       alert("更新しました");
-      setErrors({});
 
     } catch(error) {
       console.error("更新に失敗しました:", error);
@@ -128,7 +106,6 @@ export default function AdminCategoryIdPage() {
       <CategoryForm
         name={name}
         setName={setName}
-        error={errors.name}
         isSubmitting={isSubmitting}
         submitLabel="更新"
         onSubmit={handleSubmit}
