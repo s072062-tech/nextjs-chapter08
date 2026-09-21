@@ -1,10 +1,13 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import type { GetPostsResponse } from "@/app/api/posts/route";
-import Link from "next/link";
+import { useSupabaseSession } from "@/app/_hooks/useSupabaseSession";
 
 export default function AdminPostsPage() {
+
+  const { token } = useSupabaseSession();
 
   const [ posts, setPosts ]     = useState<GetPostsResponse["posts"]>([]);
   const [ loading, setLoading ] = useState(true);
@@ -14,8 +17,15 @@ export default function AdminPostsPage() {
   useEffect(() => {
     const fetcher = async () => {
 
+      if (!token) return;
+
       try {
-        const res = await fetch("/api/admin/posts");
+        const res = await fetch("/api/admin/posts", {
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: token,
+          },
+        });        
         const { posts } = await res.json();
         setPosts(posts);
 
@@ -28,7 +38,7 @@ export default function AdminPostsPage() {
     }
 
     fetcher();
-  }, []);
+  }, [token]);
 
   // 読み込み中表示
   if(loading) {

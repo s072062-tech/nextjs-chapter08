@@ -4,10 +4,12 @@ import { useState, type SubmitEvent } from "react";
 import { useRouter } from "next/navigation";
 import type { CreateCategoryRequestBody } from "@/app/api/admin/categories/route";
 import CategoryForm from "@/app/_components/admin/CategoryForm";
+import { useSupabaseSession } from "@/app/_hooks/useSupabaseSession";
 
 export default function AdminCategoryNewPage() {
 
   const router = useRouter();
+  const { token } = useSupabaseSession();
   const [ name, setName ] = useState("");
   const [ isSubmitting, setIsSubmitting ] = useState(false);
 
@@ -15,13 +17,18 @@ export default function AdminCategoryNewPage() {
   const handleSubmit = async (e: SubmitEvent<HTMLFormElement>) => { 
     e.preventDefault();
 
+    if (!token) return;
+
     const body: CreateCategoryRequestBody = { name };
     setIsSubmitting(true);
 
     try {
       await fetch("/api/admin/categories", {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: token,
+        },
         body: JSON.stringify(body),
       });
 

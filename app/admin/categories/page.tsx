@@ -3,9 +3,11 @@
 import { useEffect, useState } from "react";
 import type { CategoriesResponse } from "@/app/api/admin/categories/route";
 import Link from "next/link";
+import { useSupabaseSession } from "@/app/_hooks/useSupabaseSession";
 
 export default function AdminCategoriesPage() {
 
+  const { token } = useSupabaseSession();
   const [ categories, setCategories ]     = useState<CategoriesResponse["categories"]>([]);
   const [ loading, setLoading ] = useState(true);
   const [ error, setError ]     = useState<string | null>(null);
@@ -14,8 +16,15 @@ export default function AdminCategoriesPage() {
   useEffect(() => {
     const fetcher = async () => {
 
+      if (!token) return;
+
       try {
-        const res = await fetch("/api/admin/categories");
+        const res = await fetch("/api/admin/categories", {
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: token,
+          },
+        });
         const { categories } = await res.json();
         setCategories(categories);
 
@@ -28,7 +37,7 @@ export default function AdminCategoriesPage() {
     }
 
     fetcher();
-  }, []);
+  }, [token]);
 
   // 読み込み中表示
   if(loading) {

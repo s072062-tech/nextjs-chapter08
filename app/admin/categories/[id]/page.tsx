@@ -4,11 +4,13 @@ import { useEffect, useState, type SubmitEvent } from "react";
 import { useParams, useRouter } from "next/navigation";
 import type { CategoryResponse, UpdateCategoryRequestBody } from "@/app/api/admin/categories/[id]/route";
 import CategoryForm from "@/app/_components/admin/CategoryForm";
+import { useSupabaseSession } from "@/app/_hooks/useSupabaseSession";
 
 export default function AdminCategoryIdPage() {
 
   const router = useRouter();
   const { id } = useParams();
+  const { token } = useSupabaseSession();
   const [ loading, setLoading ] = useState(true);
   const [ error, setError ]     = useState<string | null>(null);
 
@@ -19,8 +21,15 @@ export default function AdminCategoryIdPage() {
   useEffect(() => {
     const fetcher = async () => {
 
+      if (!token) return;
+
       try {
-        const res = await fetch(`/api/admin/categories/${id}`);
+        const res = await fetch(`/api/admin/categories/${id}`, {
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: token,
+          },
+        });
         const { category } = await res.json() as CategoryResponse;
         setName(category.name);
 
@@ -33,7 +42,7 @@ export default function AdminCategoryIdPage() {
     }
 
     fetcher();
-  }, []);
+  }, [token, id]);
 
   // 読み込み中表示
   if(loading) {
@@ -57,13 +66,18 @@ export default function AdminCategoryIdPage() {
   const handleSubmit = async (e: SubmitEvent<HTMLFormElement>) => { 
     e.preventDefault();
 
+    if (!token) return;
+
     const body: UpdateCategoryRequestBody = { name };
     setIsSubmitting(true);
 
     try {
       await fetch(`/api/admin/categories/${id}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: token,
+        },
         body: JSON.stringify(body),
       });
 
@@ -81,11 +95,17 @@ export default function AdminCategoryIdPage() {
   const handleDelete = async () => { 
     if (!confirm('削除しますか？')) return;
 
+    if (!token) return;
+
     setIsSubmitting(true);
 
     try {
       await fetch(`/api/admin/categories/${id}`, {
         method: 'DELETE',
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: token,
+        },
       });
 
       alert("削除しました");

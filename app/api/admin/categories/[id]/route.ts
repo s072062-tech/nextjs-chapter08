@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/app/_libs/prisma";
+import { supabase } from "@/app/_libs/supabase";
 import type { PropsParams } from "@/app/_types/types";
 
 // カテゴリーレスポンス
@@ -17,7 +18,14 @@ export type UpdateCategoryRequestBody = {
   name: string,
 };
 
-export const GET = async (_request: Request, {params}: PropsParams) => {
+export const GET = async (request: Request, {params}: PropsParams) => {
+  const token = request.headers.get('Authorization') ?? '';
+
+  const { error } = await supabase.auth.getUser(token);
+
+  if (error)
+    return NextResponse.json({ status: error.message }, { status: 400 });
+
   const {id} = await params;
   const categoryId = Number(id);
 
@@ -46,6 +54,13 @@ export const GET = async (_request: Request, {params}: PropsParams) => {
 };
 
 export const PUT = async (request: Request, {params}: PropsParams) => {
+  const token = request.headers.get('Authorization') ?? '';
+
+  const { error } = await supabase.auth.getUser(token);
+
+  if (error)
+    return NextResponse.json({ status: error.message }, { status: 400 });
+
   const {id} = await params;
   const categoryId = Number(id);
 
@@ -69,7 +84,14 @@ export const PUT = async (request: Request, {params}: PropsParams) => {
   }
 };
 
-export const DELETE = async (_request: Request, {params}: PropsParams) => {
+export const DELETE = async (request: Request, {params}: PropsParams) => {
+  const token = request.headers.get('Authorization') ?? '';
+
+  const { error } = await supabase.auth.getUser(token);
+  
+  if (error)
+    return NextResponse.json({ status: error.message }, { status: 400 });
+
   const {id} = await params;
   const categoryId = Number(id);
 

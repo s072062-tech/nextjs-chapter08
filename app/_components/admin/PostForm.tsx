@@ -1,6 +1,7 @@
 "use client";
 
-import type { SubmitEvent } from "react";
+import Image from "next/image";
+import type { ChangeEvent, SubmitEvent } from "react";
 import type { CategoriesResponse } from "@/app/api/admin/categories/route";
 
 type Props = {
@@ -8,8 +9,6 @@ type Props = {
   setTitle: (title: string) => void;
   content: string;
   setContent: (content: string) => void;
-  thumbnailUrl: string;
-  setThumbnailUrl: (thumbnailUrl: string) => void;
   categories: CategoriesResponse["categories"];
   selectCategories: number[];
   setSelectCategories: (
@@ -19,6 +18,8 @@ type Props = {
   submitLabel: string;
   onSubmit: (e: SubmitEvent<HTMLFormElement>) => void;
   onDelete?: () => void;
+  handleImageChange?: (e: ChangeEvent<HTMLInputElement>) => void;
+  thumbnailImageUrl?: string | null;
 };
 
 export default function PostForm({
@@ -26,8 +27,6 @@ export default function PostForm({
   setTitle,
   content,
   setContent,
-  thumbnailUrl,
-  setThumbnailUrl,
   categories,
   selectCategories,
   setSelectCategories,
@@ -35,6 +34,8 @@ export default function PostForm({
   submitLabel,
   onSubmit,
   onDelete,
+  handleImageChange,
+  thumbnailImageUrl,
 }: Props) {
   // カテゴリー選択 切り替え
   const handleCategoryChange = (id: number, checked: boolean) => {
@@ -70,17 +71,23 @@ export default function PostForm({
           className="border border-gray-300 w-full h-40 px-3 py-2"
         />
       </div>
-      {/* サムネイルURL 入力 */}
+      {/* サムネイル画像 */}
       <div>
-        <label className="block text-sm text-gray-500 mb-1">サムネイルURL</label>
-        <input
-          type="text"
-          value={thumbnailUrl}
-          onChange={(e) => setThumbnailUrl(e.target.value)}
-          disabled={isSubmitting}
-          className="border border-gray-300 w-full px-3 py-2"
-        />
+        <label
+          htmlFor="thumbnailImageKey"
+          className="block text-sm font-medium text-gray-700"
+        >
+          サムネイル画像
+        </label>
+        <input type="file" id="thumbnailImageKey" onChange={handleImageChange} accept="image/*" />
       </div>
+
+      {thumbnailImageUrl && (
+        <div className="mt-2">
+          <Image src={thumbnailImageUrl} alt="thumbnail" height={400} width={800} />
+        </div>
+      )}
+
       {/* カテゴリー選択 */}
       <div>
         <label className="block text-sm text-gray-500 mb-1">カテゴリー</label>
