@@ -1,75 +1,63 @@
 "use client";
 
-import { useEffect, useState, type SubmitEvent } from "react";
+import { useEffect, useState } from "react";
+import useSWR from "swr";
 import { useParams, useRouter } from "next/navigation";
+import { useForm } from "react-hook-form";
 import type { CategoryResponse, UpdateCategoryRequestBody } from "@/app/api/admin/categories/[id]/route";
-import CategoryForm from "@/app/_components/admin/CategoryForm";
+import CategoryForm, { type CategoryFormData } from "@/app/_components/admin/CategoryForm";
 import { useSupabaseSession } from "@/app/_hooks/useSupabaseSession";
+
+const fetcher = async ([url, token]: [string, string]) => {
+  const res = await fetch(url, {
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: token,
+    },
+  });
+
+  if (!res.ok) {
+    const errorData = await res.json();
+    throw new Error(errorData.message ?? "カテゴリーの取得に失敗しました。");
+  }
+
+  const { category }: CategoryResponse = await res.json();
+  return category;
+};
 
 export default function AdminCategoryIdPage() {
 
-  const router = useRouter();
   const { id } = useParams();
+  const router = useRouter();
   const { token } = useSupabaseSession();
-  const [ loading, setLoading ] = useState(true);
-  const [ error, setError ]     = useState<string | null>(null);
-
-  const [ name, setName ] = useState("");
-  const [ isSubmitting, setIsSubmitting ] = useState(false);
+  const [ isDeleting, setIsDeleting ] = useState(false);
 
   // IDのカテゴリー取得
+  const { data: category, error, isLoading } = useSWR(
+    token && id ? [`/api/admin/categories/${id}`, token] : null,
+    fetcher,
+  );
+
+  const { register, handleSubmit, reset, formState: { isSubmitting }, } = useForm<CategoryFormData>({
+    defaultValues: {
+      name: "",
+    },
+  });
+
+  // 取得したカテゴリーの値を設定
   useEffect(() => {
-    const fetcher = async () => {
+    if (!category) return;
 
-      if (!token) return;
-
-      try {
-        const res = await fetch(`/api/admin/categories/${id}`, {
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: token,
-          },
-        });
-        const { category } = await res.json() as CategoryResponse;
-        setName(category.name);
-
-      } catch {
-        setError('カテゴリーの取得に失敗しました。');
-      } finally {
-        setLoading(false);
-      }
-
-    }
-
-    fetcher();
-  }, [token, id]);
-
-  // 読み込み中表示
-  if(loading) {
-    return (
-      <p className="text-center text-gray-500 py-12">
-        読み込み中です...
-      </p>
-    )
-  }
-
-  // エラー表示
-  if(error) {
-    return (
-      <p className="text-center text-red-500 py-12">
-        {error}
-      </p>
-    )
-  }
+    reset({ 
+      name: category.name 
+    });
+  }, [category, reset]);
 
   // カテゴリー更新
-  const handleSubmit = async (e: SubmitEvent<HTMLFormElement>) => { 
-    e.preventDefault();
-
+  const onSubmit = async (data: CategoryFormData) => {
     if (!token) return;
 
-    const body: UpdateCategoryRequestBody = { name };
-    setIsSubmitting(true);
+    const body: UpdateCategoryRequestBody = { name: data.name };
 
     try {
       await fetch(`/api/admin/categories/${id}`, {
@@ -85,19 +73,16 @@ export default function AdminCategoryIdPage() {
 
     } catch(error) {
       console.error("更新に失敗しました:", error);
-
-    } finally {
-      setIsSubmitting(false);
     }
   }
 
   // カテゴリー削除
-  const handleDelete = async () => { 
+  const handleDelete = async () => {
     if (!confirm('削除しますか？')) return;
 
     if (!token) return;
 
-    setIsSubmitting(true);
+    setIsDeleting(true);
 
     try {
       await fetch(`/api/admin/categories/${id}`, {
@@ -115,8 +100,26 @@ export default function AdminCategoryIdPage() {
       console.error("削除に失敗しました:", error);
 
     } finally {
-      setIsSubmitting(false);
+      setIsDeleting(false);
     }
+  }
+
+  // 読み込み中表示
+  if(isLoading) {
+    return (
+      <p className="text-center text-gray-500 py-12">
+        読み込み中です...
+      </p>
+    )
+  }
+
+  // エラー表示
+  if(error) {
+    return (
+      <p className="text-center text-red-500 py-12">
+        {error.message}
+      </p>
+    )
   }
 
   return (
@@ -124,11 +127,10 @@ export default function AdminCategoryIdPage() {
       <h1 className="text-2xl font-bold">カテゴリー編集</h1>
 
       <CategoryForm
-        name={name}
-        setName={setName}
-        isSubmitting={isSubmitting}
+        register={register}
+        isSubmitting={isSubmitting || isDeleting}
         submitLabel="更新"
-        onSubmit={handleSubmit}
+        onSubmit={handleSubmit(onSubmit)}
         onDelete={handleDelete}
       />
     </div>

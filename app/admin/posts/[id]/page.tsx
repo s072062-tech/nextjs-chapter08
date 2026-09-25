@@ -1,78 +1,103 @@
 "use client";
 
-import { ChangeEvent, useEffect, useState, type SubmitEvent } from "react";
+import { ChangeEvent, useEffect, useState } from "react";
+import useSWR from "swr";
 import { useParams, useRouter } from "next/navigation";
+import { useForm } from "react-hook-form";
 import { v4 as uuidv4 } from "uuid";
 import { supabase } from "@/app/_libs/supabase";
 import type { GetPostsIdResponse } from "@/app/api/posts/[id]/route";
 import type { UpdatePostRequestBody } from "@/app/api/admin/posts/[id]/route";
 import type { CategoriesResponse } from "@/app/api/admin/categories/route";
-import PostForm from "@/app/_components/admin/PostForm";
+import PostForm, { type PostFormData } from "@/app/_components/admin/PostForm";
 import { useSupabaseSession } from "@/app/_hooks/useSupabaseSession";
+
+const categoriesFetcher = async ([url, token]: [string, string]) => {
+  const res = await fetch(url, {
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: token,
+    },
+  });
+
+  if (!res.ok) {
+    const errorData = await res.json();
+    throw new Error(errorData.message ?? "カテゴリーの取得に失敗しました。");
+  }
+
+  const { categories }: CategoriesResponse = await res.json();
+  return categories;
+};
+
+const postFetcher = async ([url, token]: [string, string]) => {
+  const res = await fetch(url, {
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: token,
+    },
+  });
+
+  if (!res.ok) {
+    const errorData = await res.json();
+    throw new Error(errorData.message ?? "記事の取得に失敗しました。");
+  }
+
+  const { post }: GetPostsIdResponse = await res.json();
+  return post;
+};
 
 export default function AdminPostIdPage() {
 
-  const router = useRouter();
   const { id } = useParams();
+  const router = useRouter();
   const { token } = useSupabaseSession();
-  const [ loading, setLoading ] = useState(true);
-  const [ error, setError ]     = useState<string | null>(null);
-
-  const [ title, setTitle ] = useState("");
-  const [ content, setContent ] = useState("");
-  const [ thumbnailImageKey, setThumbnailImageKey ] = useState("");
+  const [ isDeleting, setIsDeleting ] = useState(false);
   const [ thumbnailImageUrl, setThumbnailImageUrl ] = useState<null | string>(null);
-  const [ categories, setCategories ]     = useState<CategoriesResponse["categories"]>([]);
-  const [ selectCategories, setSelectCategories ] = useState<number[]>([]);
-  const [ isSubmitting, setIsSubmitting ] = useState(false);
 
   // IDの記事, カテゴリー一覧 取得
+  const { data: categories, error: categoriesError, isLoading: isCategoriesLoading } = useSWR(
+    token ? ["/api/admin/categories", token] : null,
+    categoriesFetcher,
+  );
+
+  const { data: post, error: postError, isLoading: isPostLoading } = useSWR(
+    token && id ? [`/api/admin/posts/${id}`, token] : null,
+    postFetcher,
+  );
+
+  const error = postError ?? categoriesError;
+
+  const {
+    register,
+    handleSubmit,
+    setValue,
+    getValues,
+    watch,
+    reset,
+    formState: { isSubmitting },
+  } = useForm<PostFormData>({
+    defaultValues: {
+      title: "",
+      content: "",
+      thumbnailImageKey: "",
+      categories: [],
+    },
+  });
+
+  const thumbnailImageKey = watch("thumbnailImageKey");
+  const selectCategories = watch("categories");
+
+  // 取得した記事の値を設定
   useEffect(() => {
-    const fetcher = async () => {
+    if (!post) return;
 
-      if (!token) return;
-
-      try {
-        const res = await fetch("/api/admin/categories", {
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: token,
-          },
-        });
-        const { categories } = await res.json();
-        setCategories(categories);
-
-      } catch {
-        setError('カテゴリーの取得に失敗しました。');
-      } finally {
-        setLoading(false);
-      }
-
-      try {
-        const res = await fetch(`/api/admin/posts/${id}`, {
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: token,
-          },
-        });
-        const { post } = await res.json() as GetPostsIdResponse;
-        setTitle(post.title);
-        setContent(post.content);
-        setThumbnailImageKey(post.thumbnailImageKey);
-        setSelectCategories(
-          post.postCategories.map((postCategory) => postCategory.category.id)
-        );
-
-      } catch {
-        setError('記事の取得に失敗しました。');
-      } finally {
-        setLoading(false);
-      }
-
-    }
-
-    fetcher();
-  }, [token, id]);
+    reset({
+      title: post.title,
+      content: post.content,
+      thumbnailImageKey: post.thumbnailImageKey,
+      categories: post.postCategories.map((postCategory) => postCategory.category.id),
+    });
+  }, [post, reset]);
 
   // thumbnailImageKeyを用いて画像のURLを取得
   useEffect(() => {
@@ -91,38 +116,16 @@ export default function AdminPostIdPage() {
     fetcher();
   }, [thumbnailImageKey]);
 
-  // 読み込み中表示
-  if(loading) {
-    return (
-      <p className="text-center text-gray-500 py-12">
-        読み込み中です...
-      </p>
-    )
-  }
-
-  // エラー表示
-  if(error) {
-    return (
-      <p className="text-center text-red-500 py-12">
-        {error}
-      </p>
-    )
-  }
-
   // 記事更新
-  const handleSubmit = async (e: SubmitEvent<HTMLFormElement>) => {
-    e.preventDefault();
-
+  const onSubmit = async (data: PostFormData) => {
     if (!token) return;
 
     const body: UpdatePostRequestBody = {
-      title,
-      content,
-      thumbnailImageKey,
-      categories: selectCategories.map((id) => ({ id })),
+      title: data.title,
+      content: data.content,
+      thumbnailImageKey: data.thumbnailImageKey,
+      categories: data.categories.map((categoryId) => ({ id: categoryId })),
     };
-
-    setIsSubmitting(true);
 
     try {
       await fetch(`/api/admin/posts/${id}`, {
@@ -138,9 +141,6 @@ export default function AdminPostIdPage() {
 
     } catch(error) {
       console.error("更新に失敗しました:", error);
-
-    } finally {
-      setIsSubmitting(false);
     }
   }
 
@@ -150,7 +150,7 @@ export default function AdminPostIdPage() {
 
     if (!token) return;
 
-    setIsSubmitting(true);
+    setIsDeleting(true);
 
     try {
       await fetch(`/api/admin/posts/${id}`, {
@@ -168,7 +168,7 @@ export default function AdminPostIdPage() {
       console.error("削除に失敗しました:", error);
 
     } finally {
-      setIsSubmitting(false);
+      setIsDeleting(false);
     }
   }
 
@@ -193,7 +193,25 @@ export default function AdminPostIdPage() {
       return;
     }
 
-    setThumbnailImageKey(data.path);
+    setValue("thumbnailImageKey", data.path);
+  }
+
+  // 読み込み中表示
+  if(isCategoriesLoading || isPostLoading) {
+    return (
+      <p className="text-center text-gray-500 py-12">
+        読み込み中です...
+      </p>
+    )
+  }
+
+  // エラー表示
+  if(error) {
+    return (
+      <p className="text-center text-red-500 py-12">
+        {error.message}
+      </p>
+    )
   }
 
   return (
@@ -201,16 +219,14 @@ export default function AdminPostIdPage() {
       <h1 className="text-2xl font-bold">記事作成</h1>
 
       <PostForm
-        title={title}
-        setTitle={setTitle}
-        content={content}
-        setContent={setContent}
-        categories={categories}
+        register={register}
+        setValue={setValue}
+        getValues={getValues}
+        categories={categories ?? []}
         selectCategories={selectCategories}
-        setSelectCategories={setSelectCategories}
-        isSubmitting={isSubmitting}
+        isSubmitting={isSubmitting || isDeleting}
         submitLabel="更新"
-        onSubmit={handleSubmit}
+        onSubmit={handleSubmit(onSubmit)}
         onDelete={handleDelete}
         handleImageChange={handleImageChange}
         thumbnailImageUrl={thumbnailImageUrl}

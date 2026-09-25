@@ -1,55 +1,63 @@
 "use client";
 
-import { ChangeEvent, useEffect, useState, type SubmitEvent } from "react";
+import { ChangeEvent, useEffect, useState } from "react";
+import useSWR from "swr";
 import { useRouter } from "next/navigation";
+import { useForm } from "react-hook-form";
 import { v4 as uuidv4 } from "uuid";
 import { supabase } from "@/app/_libs/supabase";
 import type { CreatePostRequestBody } from "@/app/api/admin/posts/route";
 import type { CategoriesResponse } from "@/app/api/admin/categories/route";
-import PostForm from "@/app/_components/admin/PostForm";
+import PostForm, { type PostFormData } from "@/app/_components/admin/PostForm";
 import { useSupabaseSession } from "@/app/_hooks/useSupabaseSession";
+
+const fetcher = async ([url, token]: [string, string]) => {
+  const res = await fetch(url, {
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: token,
+    },
+  });
+
+  if (!res.ok) {
+    const errorData = await res.json();
+    throw new Error(errorData.message ?? "カテゴリーの取得に失敗しました。");
+  }
+
+  const { categories }: CategoriesResponse = await res.json();
+  return categories;
+};
 
 export default function AdminPostNewPage() {
 
   const router = useRouter();
   const { token } = useSupabaseSession();
-  const [ loading, setLoading ] = useState(true);
-  const [ error, setError ]     = useState<string | null>(null);
-
-  const [ title, setTitle ] = useState("");
-  const [ content, setContent ] = useState("");
-  const [ thumbnailImageKey, setThumbnailImageKey ] = useState("");
   const [ thumbnailImageUrl, setThumbnailImageUrl ] = useState<null | string>(null);
-  const [ categories, setCategories ]     = useState<CategoriesResponse["categories"]>([]);
-  const [ selectCategories, setSelectCategories ] = useState<number[]>([]);
-  const [ isSubmitting, setIsSubmitting ] = useState(false);
+
+  const {
+    register,
+    handleSubmit,
+    setValue,
+    getValues,
+    watch,
+    formState: { isSubmitting },
+  } = useForm<PostFormData>({
+    defaultValues: {
+      title: "",
+      content: "",
+      thumbnailImageKey: "",
+      categories: [],
+    },
+  });
+
+  const thumbnailImageKey = watch("thumbnailImageKey");
+  const selectCategories = watch("categories");
 
   // カテゴリー一覧取得
-  useEffect(() => {
-    const fetcher = async () => {
-
-      if (!token) return;
-
-      try {
-        const res = await fetch("/api/admin/categories", {
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: token,
-          },
-        });
-        const { categories } = await res.json();
-        setCategories(categories);
-
-      } catch {
-        setError('カテゴリーの取得に失敗しました。');
-      } finally {
-        setLoading(false);
-      }
-
-    }
-
-    fetcher();
-  }, [token]);
+  const { data: categories, error, isLoading } = useSWR(
+    token ? ["/api/admin/categories", token] : null,
+    fetcher,
+  );
 
   // アップロード時に取得した、thumbnailImageKeyを用いて画像のURLを取得
   useEffect(() => {
@@ -68,38 +76,16 @@ export default function AdminPostNewPage() {
     fetcher()
   }, [thumbnailImageKey])
 
-  // 読み込み中表示
-  if(loading) {
-    return (
-      <p className="text-center text-gray-500 py-12">
-        読み込み中です...
-      </p>
-    )
-  }
-
-  // エラー表示
-  if(error) {
-    return (
-      <p className="text-center text-red-500 py-12">
-        {error}
-      </p>
-    )
-  }
-
   // 新規記事送信
-  const handleSubmit = async (e: SubmitEvent<HTMLFormElement>) => {
-    e.preventDefault();
-
+  const onSubmit = async (data: PostFormData) => {
     if (!token) return;
 
     const body: CreatePostRequestBody = {
-      title,
-      content,
-      thumbnailImageKey,
-      categories: selectCategories.map((id) => ({ id })),
+      title: data.title,
+      content: data.content,
+      thumbnailImageKey: data.thumbnailImageKey,
+      categories: data.categories.map((id) => ({ id })),
     };
-
-    setIsSubmitting(true);
 
     try {
       await fetch("/api/admin/posts", {
@@ -116,9 +102,6 @@ export default function AdminPostNewPage() {
 
     } catch(error) {
       console.error("作成に失敗しました:", error);
-
-    } finally {
-      setIsSubmitting(false);
     }
   }
 
@@ -148,8 +131,25 @@ export default function AdminPostNewPage() {
     }
 
     // data.pathに、画像固有のkeyが入っているので、thumbnailImageKeyに格納する
-    setThumbnailImageKey(data.path);
+    setValue("thumbnailImageKey", data.path);
+  }
 
+  // 読み込み中表示
+  if(isLoading) {
+    return (
+      <p className="text-center text-gray-500 py-12">
+        読み込み中です...
+      </p>
+    )
+  }
+
+  // エラー表示
+  if(error) {
+    return (
+      <p className="text-center text-red-500 py-12">
+        {error.message}
+      </p>
+    )
   }
 
   return (
@@ -157,16 +157,14 @@ export default function AdminPostNewPage() {
       <h1 className="text-2xl font-bold">記事作成</h1>
 
       <PostForm
-        title={title}
-        setTitle={setTitle}
-        content={content}
-        setContent={setContent}
-        categories={categories}
+        register={register}
+        setValue={setValue}
+        getValues={getValues}
+        categories={categories ?? []}
         selectCategories={selectCategories}
-        setSelectCategories={setSelectCategories}
         isSubmitting={isSubmitting}
         submitLabel="作成"
-        onSubmit={handleSubmit}
+        onSubmit={handleSubmit(onSubmit)}
         handleImageChange={handleImageChange}
         thumbnailImageUrl={thumbnailImageUrl}
       />

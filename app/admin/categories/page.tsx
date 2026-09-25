@@ -1,46 +1,39 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import useSWR from "swr";
 import type { CategoriesResponse } from "@/app/api/admin/categories/route";
 import Link from "next/link";
 import { useSupabaseSession } from "@/app/_hooks/useSupabaseSession";
 
+const fetcher = async ([url, token]: [string, string]) => {
+  const res = await fetch(url, {
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: token,
+    },
+  });
+
+  if (!res.ok) {
+    const errorData = await res.json();
+    throw new Error(errorData.message ?? "カテゴリーの取得に失敗しました。");
+  }
+
+  const { categories }: CategoriesResponse = await res.json();
+  return categories;
+};
+
 export default function AdminCategoriesPage() {
 
   const { token } = useSupabaseSession();
-  const [ categories, setCategories ]     = useState<CategoriesResponse["categories"]>([]);
-  const [ loading, setLoading ] = useState(true);
-  const [ error, setError ]     = useState<string | null>(null);
 
   // カテゴリー一覧取得
-  useEffect(() => {
-    const fetcher = async () => {
-
-      if (!token) return;
-
-      try {
-        const res = await fetch("/api/admin/categories", {
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: token,
-          },
-        });
-        const { categories } = await res.json();
-        setCategories(categories);
-
-      } catch {
-        setError('カテゴリーの取得に失敗しました。');
-      } finally {
-        setLoading(false);
-      }
-
-    }
-
-    fetcher();
-  }, [token]);
+  const { data: categories, error, isLoading } = useSWR(
+    token ? ["/api/admin/categories", token] : null,
+    fetcher,
+  );
 
   // 読み込み中表示
-  if(loading) {
+  if(isLoading) {
     return (
       <p className="text-center text-gray-500 py-12">
         読み込み中です...
@@ -52,7 +45,7 @@ export default function AdminCategoriesPage() {
   if(error) {
     return (
       <p className="text-center text-red-500 py-12">
-        {error}
+        {error.message}
       </p>
     )
   }
@@ -67,7 +60,7 @@ export default function AdminCategoriesPage() {
       </div>
       <ul>
         {/* カテゴリー一覧表示 */}
-        {categories.map((category) => {
+        {categories?.map((category) => {
           return(
             <li key={category.id} className="border-b border-gray-200">
               <Link href={`/admin/categories/${category.id}`}

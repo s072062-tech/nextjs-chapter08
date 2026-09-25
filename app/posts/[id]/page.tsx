@@ -4,42 +4,37 @@ import Link from "next/link";
 import Image from "next/image";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
+import useSWR from "swr";
 import type { GetPostsIdResponse } from "@/app/api/posts/[id]/route";
 import { supabase } from "@/app/_libs/supabase";
 import CategoryTag from "@/app/_components/CategoryTag";
 
+const fetcher = async (url: string) => {
+  const res = await fetch(url);
+
+  if (!res.ok) {
+    const errorData = await res.json();
+    throw new Error(errorData.message ?? "記事の取得に失敗しました。");
+  }
+
+  const { post }: GetPostsIdResponse = await res.json();
+  return post;
+};
 
 // 記事詳細
 export default function PostDetail() {
 
   const { id } = useParams();
-  const [ post, setPost ]       = useState<GetPostsIdResponse["post"] | null>(null);
-  const [ loading, setLoading ] = useState(true);
-  const [ error, setError ]     = useState<string | null>(null);
   const [ thumbnailImageUrl, setThumbnailImageUrl ] = useState<string | null>(null);
 
   const backLink = <Link href="/" className="inline-block mt-8 text-blue-600 font-semibold hover:underline">
       記事一覧へ戻る</Link>;
 
   // 記事詳細取得
-  useEffect(() => {
-    const fetcher = async () => {
-
-      try {
-        const res = await fetch(`/api/posts/${id}`);
-        const { post } = await res.json() as GetPostsIdResponse;
-        setPost(post) 
-
-      } catch {
-        setError('記事の取得に失敗しました。')
-      } finally {
-        setLoading(false);
-      }
-      
-    };
-        
-    fetcher();
-  }, []);
+  const { data: post, error, isLoading } = useSWR(
+    id ? `/api/posts/${id}` : null,
+    fetcher,
+  );
 
   // thumbnailImageKeyを用いて画像のURLを取得
   useEffect(() => {
@@ -55,7 +50,7 @@ export default function PostDetail() {
   }, [post?.thumbnailImageKey]);
 
   // 読み込み中表示
-  if(loading) {
+  if(isLoading) {
     return (
       <p className="text-center text-gray-500 py-12">
         記事を読み込み中です...
@@ -68,7 +63,7 @@ export default function PostDetail() {
     return (
       <div>
         <p className="text-center text-gray-500 py-12">
-          {error}
+          {error.message}
         </p>
         {backLink}
       </div>

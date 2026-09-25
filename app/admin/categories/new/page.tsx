@@ -1,26 +1,26 @@
 "use client";
 
-import { useState, type SubmitEvent } from "react";
 import { useRouter } from "next/navigation";
+import { useForm } from "react-hook-form";
 import type { CreateCategoryRequestBody } from "@/app/api/admin/categories/route";
-import CategoryForm from "@/app/_components/admin/CategoryForm";
+import CategoryForm, { type CategoryFormData } from "@/app/_components/admin/CategoryForm";
 import { useSupabaseSession } from "@/app/_hooks/useSupabaseSession";
 
 export default function AdminCategoryNewPage() {
 
   const router = useRouter();
   const { token } = useSupabaseSession();
-  const [ name, setName ] = useState("");
-  const [ isSubmitting, setIsSubmitting ] = useState(false);
+  const { register, handleSubmit, formState: { isSubmitting }, } = useForm<CategoryFormData>({
+    defaultValues: {
+      name: "",
+    },
+  });
 
   // 新規カテゴリー追加
-  const handleSubmit = async (e: SubmitEvent<HTMLFormElement>) => { 
-    e.preventDefault();
-
+  const onSubmit = async (data: CategoryFormData) => {
     if (!token) return;
 
-    const body: CreateCategoryRequestBody = { name };
-    setIsSubmitting(true);
+    const body: CreateCategoryRequestBody = { name: data.name };
 
     try {
       await fetch("/api/admin/categories", {
@@ -37,9 +37,6 @@ export default function AdminCategoryNewPage() {
 
     } catch(error) {
       console.error("作成に失敗しました:", error);
-
-    } finally {
-      setIsSubmitting(false);
     }
   }
 
@@ -48,11 +45,10 @@ export default function AdminCategoryNewPage() {
       <h1 className="text-2xl font-bold">カテゴリー作成</h1>
 
       <CategoryForm
-        name={name}
-        setName={setName}
+        register={register}
         isSubmitting={isSubmitting}
         submitLabel="作成"
-        onSubmit={handleSubmit}
+        onSubmit={handleSubmit(onSubmit)}
       />
     </div>
   );
