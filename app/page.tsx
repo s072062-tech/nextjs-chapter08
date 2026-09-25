@@ -1,38 +1,29 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import useSWR from "swr";
 import type { GetPostsResponse } from "@/app/api/posts/route";
 import PostCard from "./_components/PostCard";
+
+const fetcher = async (url: string) => {
+  const res = await fetch(url);
+
+  if (!res.ok) {
+    const errorData = await res.json();
+    throw new Error(errorData.message ?? "記事の取得に失敗しました。");
+  }
+
+  const { posts }: GetPostsResponse = await res.json();
+  return posts;
+};
 
 // 記事一覧ページ
 export default function Home () {
 
-  const [ posts, setPosts ]     = useState<GetPostsResponse["posts"]>([]);
-  const [ loading, setLoading ] = useState(true);
-  const [ error, setError ]     = useState<string | null>(null);
-
   // 記事一覧取得
-  useEffect(() => {
-    const fetcher = async () => {
-
-      try {
-        const res = await fetch("/api/posts");
-        const { posts } = await res.json()
-        setPosts(posts)
-
-      } catch {
-        setError('記事の取得に失敗しました。')
-      } finally {
-        setLoading(false);
-      }
-
-    }
-
-    fetcher();
-  }, []);
+  const { data: posts, error, isLoading } = useSWR("/api/posts", fetcher);
 
   // 読み込み中表示
-  if(loading) {
+  if(isLoading) {
     return (
       <p className="text-center text-gray-500 py-12">
         記事を読み込み中です...
@@ -44,7 +35,7 @@ export default function Home () {
   if(error) {
     return (
       <p className="text-center text-red-500 py-12">
-        {error}
+        {error.message}
       </p>
     )
   }
@@ -54,7 +45,7 @@ export default function Home () {
       <h1 className="text-2xl font-bold mb-6">記事一覧</h1>
       {/* 記事情報表示 */}
       <div className="space-y-6">
-        {posts.map((post) => (
+        {posts?.map((post) => (
           <PostCard key={post.id} post={post} />
         ))}
       </div>
