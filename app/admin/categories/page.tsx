@@ -1,37 +1,22 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useFetch } from "@/app/_hooks/useFetch";
 import type { CategoriesResponse } from "@/app/api/admin/categories/route";
 import Link from "next/link";
+import { useSupabaseSession } from "@/app/_hooks/useSupabaseSession";
 
 export default function AdminCategoriesPage() {
 
-  const [ categories, setCategories ]     = useState<CategoriesResponse["categories"]>([]);
-  const [ loading, setLoading ] = useState(true);
-  const [ error, setError ]     = useState<string | null>(null);
+  const { token } = useSupabaseSession();
 
   // カテゴリー一覧取得
-  useEffect(() => {
-    const fetcher = async () => {
-
-      try {
-        const res = await fetch("/api/admin/categories");
-        const { categories } = await res.json();
-        setCategories(categories);
-
-      } catch {
-        setError('カテゴリーの取得に失敗しました。');
-      } finally {
-        setLoading(false);
-      }
-
-    }
-
-    fetcher();
-  }, []);
+  const { data, error, isLoading } = useFetch<CategoriesResponse>(
+    token ? ["/api/admin/categories", token] : null
+  );
+  const categories = data?.categories;
 
   // 読み込み中表示
-  if(loading) {
+  if(isLoading) {
     return (
       <p className="text-center text-gray-500 py-12">
         読み込み中です...
@@ -43,7 +28,7 @@ export default function AdminCategoriesPage() {
   if(error) {
     return (
       <p className="text-center text-red-500 py-12">
-        {error}
+        {error.message}
       </p>
     )
   }
@@ -58,7 +43,7 @@ export default function AdminCategoriesPage() {
       </div>
       <ul>
         {/* カテゴリー一覧表示 */}
-        {categories.map((category) => {
+        {categories?.map((category) => {
           return(
             <li key={category.id} className="border-b border-gray-200">
               <Link href={`/admin/categories/${category.id}`}

@@ -1,48 +1,53 @@
 "use client";
 
-import type { SubmitEvent } from "react";
+import Image from "next/image";
+import type { ChangeEvent, FormEvent } from "react";
+import type { UseFormGetValues, UseFormRegister, UseFormSetValue } from "react-hook-form";
 import type { CategoriesResponse } from "@/app/api/admin/categories/route";
 
+export type PostFormData = {
+  title: string,
+  content: string,
+  thumbnailImageKey: string,
+  categories: number[],
+};
+
 type Props = {
-  title: string;
-  setTitle: (title: string) => void;
-  content: string;
-  setContent: (content: string) => void;
-  thumbnailUrl: string;
-  setThumbnailUrl: (thumbnailUrl: string) => void;
+  register: UseFormRegister<PostFormData>;
+  setValue: UseFormSetValue<PostFormData>;
+  getValues: UseFormGetValues<PostFormData>;
   categories: CategoriesResponse["categories"];
   selectCategories: number[];
-  setSelectCategories: (
-    selectCategories: number[] | ((prev: number[]) => number[])
-  ) => void;
   isSubmitting: boolean;
   submitLabel: string;
-  onSubmit: (e: SubmitEvent<HTMLFormElement>) => void;
+  onSubmit: (event: FormEvent<HTMLFormElement>) => void;
   onDelete?: () => void;
+  handleImageChange?: (e: ChangeEvent<HTMLInputElement>) => void;
+  thumbnailImageUrl?: string | null;
 };
 
 export default function PostForm({
-  title,
-  setTitle,
-  content,
-  setContent,
-  thumbnailUrl,
-  setThumbnailUrl,
+  register,
+  setValue,
+  getValues,
   categories,
   selectCategories,
-  setSelectCategories,
   isSubmitting,
   submitLabel,
   onSubmit,
   onDelete,
+  handleImageChange,
+  thumbnailImageUrl,
 }: Props) {
   // カテゴリー選択 切り替え
   const handleCategoryChange = (id: number, checked: boolean) => {
+    const current = getValues("categories");
     if (checked) {
-      setSelectCategories((prev) => [...prev, id]);
+      setValue("categories", [...current, id]);
     } else {
-      setSelectCategories((prev) =>
-        prev.filter((categoryId) => categoryId !== id)
+      setValue(
+        "categories",
+        current.filter((categoryId) => categoryId !== id)
       );
     }
   };
@@ -54,8 +59,7 @@ export default function PostForm({
         <label className="block text-sm text-gray-500 mb-1">タイトル</label>
         <input
           type="text"
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
+          {...register("title")}
           disabled={isSubmitting}
           className="border border-gray-300 w-full px-3 py-2"
         />
@@ -64,23 +68,28 @@ export default function PostForm({
       <div>
         <label className="block text-sm text-gray-500 mb-1">内容</label>
         <textarea
-          value={content}
-          onChange={(e) => setContent(e.target.value)}
+          {...register("content")}
           disabled={isSubmitting}
           className="border border-gray-300 w-full h-40 px-3 py-2"
         />
       </div>
-      {/* サムネイルURL 入力 */}
+      {/* サムネイル画像 */}
       <div>
-        <label className="block text-sm text-gray-500 mb-1">サムネイルURL</label>
-        <input
-          type="text"
-          value={thumbnailUrl}
-          onChange={(e) => setThumbnailUrl(e.target.value)}
-          disabled={isSubmitting}
-          className="border border-gray-300 w-full px-3 py-2"
-        />
+        <label
+          htmlFor="thumbnailImageKey"
+          className="block text-sm font-medium text-gray-700"
+        >
+          サムネイル画像
+        </label>
+        <input type="file" id="thumbnailImageKey" onChange={handleImageChange} accept="image/*" />
       </div>
+
+      {thumbnailImageUrl && (
+        <div className="mt-2">
+          <Image src={thumbnailImageUrl} alt="thumbnail" height={400} width={800} />
+        </div>
+      )}
+
       {/* カテゴリー選択 */}
       <div>
         <label className="block text-sm text-gray-500 mb-1">カテゴリー</label>

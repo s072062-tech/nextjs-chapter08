@@ -4,42 +4,41 @@ import Link from "next/link";
 import Image from "next/image";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
+import { useFetch } from "@/app/_hooks/useFetch";
 import type { GetPostsIdResponse } from "@/app/api/posts/[id]/route";
+import { supabase } from "@/app/_libs/supabase";
 import CategoryTag from "@/app/_components/CategoryTag";
 
 // 記事詳細
 export default function PostDetail() {
 
   const { id } = useParams();
-  const [ post, setPost ]       = useState<GetPostsIdResponse["post"] | null>(null);
-  const [ loading, setLoading ] = useState(true);
-  const [ error, setError ]     = useState<string | null>(null);
+  const [ thumbnailImageUrl, setThumbnailImageUrl ] = useState<string | null>(null);
 
   const backLink = <Link href="/" className="inline-block mt-8 text-blue-600 font-semibold hover:underline">
       記事一覧へ戻る</Link>;
 
   // 記事詳細取得
+  const { data, error, isLoading } = useFetch<GetPostsIdResponse>(
+    id ? `/api/posts/${id}` : null
+  );
+  const post = data?.post;
+
+  // thumbnailImageKeyを用いて画像のURLを取得
   useEffect(() => {
-    const fetcher = async () => {
+    if (!post?.thumbnailImageKey) return;
 
-      try {
-        const res = await fetch(`/api/posts/${id}`);
-        const { post } = await res.json() as GetPostsIdResponse;
-        setPost(post) 
+    const {
+      data: { publicUrl },
+    } = supabase.storage
+      .from('post_thumbnail')
+      .getPublicUrl(post.thumbnailImageKey);
 
-      } catch {
-        setError('記事の取得に失敗しました。')
-      } finally {
-        setLoading(false);
-      }
-      
-    };
-        
-    fetcher();
-  }, []);
+    setThumbnailImageUrl(publicUrl);
+  }, [post?.thumbnailImageKey]);
 
   // 読み込み中表示
-  if(loading) {
+  if(isLoading) {
     return (
       <p className="text-center text-gray-500 py-12">
         記事を読み込み中です...
@@ -52,7 +51,7 @@ export default function PostDetail() {
     return (
       <div>
         <p className="text-center text-gray-500 py-12">
-          {error}
+          {error.message}
         </p>
         {backLink}
       </div>
@@ -71,13 +70,15 @@ export default function PostDetail() {
     )
   }
 
-  const {title, thumbnailUrl, createdAt, postCategories, content} = post;
+  const {title, createdAt, postCategories, content} = post;
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-4">
       {/* サムネ画像 */}
-      <Image src={thumbnailUrl} alt={title} width={800} height={400}
-      className="py-4 object-cover shrink-0" />
+      {thumbnailImageUrl && (
+        <Image src={thumbnailImageUrl} alt={title} width={800} height={400}
+        className="py-4 object-cover shrink-0" />
+      )}
       <div className="flex flex-row items-center gap-2 mb-6">
         {/* 作成時間 */}
         <span className="text-sm text-gray-500">

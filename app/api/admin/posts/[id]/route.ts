@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/app/_libs/prisma";
+import { supabase } from "@/app/_libs/supabase";
 import type { PropsParams } from "@/app/_types/types";
 import type { GetPostsIdResponse } from "@/app/api/posts/[id]/route";
 
@@ -8,10 +9,17 @@ export type UpdatePostRequestBody = {
   title: string,
   content: string,
   categories: { id: number }[],
-  thumbnailUrl: string,
+  thumbnailImageKey: string,
 };
 
-export const GET = async (_request: Request, {params}: PropsParams) => {
+export const GET = async (request: Request, {params}: PropsParams) => {
+  const token = request.headers.get('Authorization') ?? '';
+
+  const { error } = await supabase.auth.getUser(token);
+
+  if (error)
+    return NextResponse.json({ status: error.message }, { status: 400 });
+
   const {id} = await params;
   const postId = Number(id);
 
@@ -52,6 +60,13 @@ export const GET = async (_request: Request, {params}: PropsParams) => {
 };
 
 export const PUT = async (request: Request, {params}: PropsParams) => {
+  const token = request.headers.get('Authorization') ?? '';
+
+  const { error } = await supabase.auth.getUser(token);
+
+  if (error)
+    return NextResponse.json({ status: error.message }, { status: 400 });
+
   const {id} = await params;
   const postId = Number(id);
 
@@ -60,7 +75,7 @@ export const PUT = async (request: Request, {params}: PropsParams) => {
   }
 
   const body = (await request.json()) as UpdatePostRequestBody;
-  const { title, content, categories, thumbnailUrl } = body;
+  const { title, content, categories, thumbnailImageKey } = body;
 
   try {
     // 指定されたPostを更新
@@ -69,7 +84,7 @@ export const PUT = async (request: Request, {params}: PropsParams) => {
       data: {
         title,
         content,
-        thumbnailUrl,
+        thumbnailImageKey,
         postCategories: {
           deleteMany: {},
           create: categories.map((category) => ({ categoryId: category.id })),
@@ -87,7 +102,14 @@ export const PUT = async (request: Request, {params}: PropsParams) => {
   }
 };
 
-export const DELETE = async (_request: Request, {params}: PropsParams) => {
+export const DELETE = async (request: Request, {params}: PropsParams) => {
+  const token = request.headers.get('Authorization') ?? '';
+
+  const { error } = await supabase.auth.getUser(token);
+  
+  if (error)
+    return NextResponse.json({ status: error.message }, { status: 400 });
+
   const {id} = await params;
   const postId = Number(id);
 

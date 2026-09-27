@@ -1,19 +1,22 @@
 "use client";
 
-import type { SubmitEvent } from "react";
+import type { FormEvent } from "react";
+import type { UseFormRegister } from "react-hook-form";
+
+export type CategoryFormData = {
+  name: string,
+};
 
 type Props = {
-  name: string;
-  setName: (name: string) => void;
+  register: UseFormRegister<CategoryFormData>;
   isSubmitting: boolean;
   submitLabel: string;
-  onSubmit: (e: SubmitEvent<HTMLFormElement>) => void;
+  onSubmit: (event: FormEvent<HTMLFormElement>) => void;
   onDelete?: () => void;
 };
 
 export default function CategoryForm({
-  name,
-  setName,
+  register,
   isSubmitting,
   submitLabel,
   onSubmit,
@@ -26,8 +29,7 @@ export default function CategoryForm({
         <label className="block text-sm text-gray-500 mb-1">カテゴリー名</label>
         <input
           type="text"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
+          {...register("name")}
           disabled={isSubmitting}
           className="border border-gray-300 w-full px-3 py-2"
         />
