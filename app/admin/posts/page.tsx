@@ -1,36 +1,19 @@
 "use client";
 
 import Link from "next/link";
-import useSWR from "swr";
+import { useFetch } from "@/app/_hooks/useFetch";
 import type { GetPostsResponse } from "@/app/api/posts/route";
 import { useSupabaseSession } from "@/app/_hooks/useSupabaseSession";
-
-const fetcher = async ([url, token]: [string, string]) => {
-  const res = await fetch(url, {
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: token,
-    },
-  });
-
-  if (!res.ok) {
-    const errorData = await res.json();
-    throw new Error(errorData.message ?? "記事の取得に失敗しました。");
-  }
-
-  const { posts }: GetPostsResponse = await res.json();
-  return posts;
-};
 
 export default function AdminPostsPage() {
 
   const { token } = useSupabaseSession();
 
   // 記事一覧取得
-  const { data: posts, error, isLoading } = useSWR(
-    token ? ["/api/admin/posts", token] : null,
-    fetcher,
+  const { data, error, isLoading } = useFetch<GetPostsResponse>(
+    token ? ["/api/admin/posts", token] : null
   );
+  const posts = data?.posts;
 
   // 読み込み中表示
   if(isLoading) {

@@ -1,29 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import useSWR from "swr";
 import { useParams, useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
+import { useFetch } from "@/app/_hooks/useFetch";
 import type { CategoryResponse, UpdateCategoryRequestBody } from "@/app/api/admin/categories/[id]/route";
 import CategoryForm, { type CategoryFormData } from "@/app/_components/admin/CategoryForm";
 import { useSupabaseSession } from "@/app/_hooks/useSupabaseSession";
-
-const fetcher = async ([url, token]: [string, string]) => {
-  const res = await fetch(url, {
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: token,
-    },
-  });
-
-  if (!res.ok) {
-    const errorData = await res.json();
-    throw new Error(errorData.message ?? "カテゴリーの取得に失敗しました。");
-  }
-
-  const { category }: CategoryResponse = await res.json();
-  return category;
-};
 
 export default function AdminCategoryIdPage() {
 
@@ -33,10 +16,10 @@ export default function AdminCategoryIdPage() {
   const [ isDeleting, setIsDeleting ] = useState(false);
 
   // IDのカテゴリー取得
-  const { data: category, error, isLoading } = useSWR(
-    token && id ? [`/api/admin/categories/${id}`, token] : null,
-    fetcher,
+  const { data, error, isLoading } = useFetch<CategoryResponse>(
+    token && id ? [`/api/admin/categories/${id}`, token] : null
   );
+  const category = data?.category;
 
   const { register, handleSubmit, reset, formState: { isSubmitting }, } = useForm<CategoryFormData>({
     defaultValues: {

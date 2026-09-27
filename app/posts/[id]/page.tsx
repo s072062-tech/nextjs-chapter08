@@ -4,22 +4,10 @@ import Link from "next/link";
 import Image from "next/image";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
-import useSWR from "swr";
+import { useFetch } from "@/app/_hooks/useFetch";
 import type { GetPostsIdResponse } from "@/app/api/posts/[id]/route";
 import { supabase } from "@/app/_libs/supabase";
 import CategoryTag from "@/app/_components/CategoryTag";
-
-const fetcher = async (url: string) => {
-  const res = await fetch(url);
-
-  if (!res.ok) {
-    const errorData = await res.json();
-    throw new Error(errorData.message ?? "記事の取得に失敗しました。");
-  }
-
-  const { post }: GetPostsIdResponse = await res.json();
-  return post;
-};
 
 // 記事詳細
 export default function PostDetail() {
@@ -31,10 +19,10 @@ export default function PostDetail() {
       記事一覧へ戻る</Link>;
 
   // 記事詳細取得
-  const { data: post, error, isLoading } = useSWR(
-    id ? `/api/posts/${id}` : null,
-    fetcher,
+  const { data, error, isLoading } = useFetch<GetPostsIdResponse>(
+    id ? `/api/posts/${id}` : null
   );
+  const post = data?.post;
 
   // thumbnailImageKeyを用いて画像のURLを取得
   useEffect(() => {

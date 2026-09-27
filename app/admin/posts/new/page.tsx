@@ -1,32 +1,15 @@
 "use client";
 
 import { ChangeEvent, useEffect, useState } from "react";
-import useSWR from "swr";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { v4 as uuidv4 } from "uuid";
 import { supabase } from "@/app/_libs/supabase";
+import { useFetch } from "@/app/_hooks/useFetch";
 import type { CreatePostRequestBody } from "@/app/api/admin/posts/route";
 import type { CategoriesResponse } from "@/app/api/admin/categories/route";
 import PostForm, { type PostFormData } from "@/app/_components/admin/PostForm";
 import { useSupabaseSession } from "@/app/_hooks/useSupabaseSession";
-
-const fetcher = async ([url, token]: [string, string]) => {
-  const res = await fetch(url, {
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: token,
-    },
-  });
-
-  if (!res.ok) {
-    const errorData = await res.json();
-    throw new Error(errorData.message ?? "カテゴリーの取得に失敗しました。");
-  }
-
-  const { categories }: CategoriesResponse = await res.json();
-  return categories;
-};
 
 export default function AdminPostNewPage() {
 
@@ -54,10 +37,10 @@ export default function AdminPostNewPage() {
   const selectCategories = watch("categories");
 
   // カテゴリー一覧取得
-  const { data: categories, error, isLoading } = useSWR(
-    token ? ["/api/admin/categories", token] : null,
-    fetcher,
+  const { data, error, isLoading } = useFetch<CategoriesResponse>(
+    token ? ["/api/admin/categories", token] : null
   );
+  const categories = data?.categories;
 
   // アップロード時に取得した、thumbnailImageKeyを用いて画像のURLを取得
   useEffect(() => {

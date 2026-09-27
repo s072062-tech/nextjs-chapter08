@@ -1,26 +1,15 @@
 "use client";
 
-import useSWR from "swr";
+import { useFetch } from "./_hooks/useFetch";
 import type { GetPostsResponse } from "@/app/api/posts/route";
 import PostCard from "./_components/PostCard";
-
-const fetcher = async (url: string) => {
-  const res = await fetch(url);
-
-  if (!res.ok) {
-    const errorData = await res.json();
-    throw new Error(errorData.message ?? "記事の取得に失敗しました。");
-  }
-
-  const { posts }: GetPostsResponse = await res.json();
-  return posts;
-};
 
 // 記事一覧ページ
 export default function Home () {
 
   // 記事一覧取得
-  const { data: posts, error, isLoading } = useSWR("/api/posts", fetcher);
+  const { data, error, isLoading } = useFetch<GetPostsResponse>("/api/posts");
+  const posts = data?.posts;
 
   // 読み込み中表示
   if(isLoading) {
